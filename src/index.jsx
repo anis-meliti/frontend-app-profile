@@ -31,7 +31,6 @@ subscribe(APP_READY, () => {
     <AppProvider store={configureStore()}>
       <Header />
       <main>
-        <h1>Hello </h1>
         <Switch>
           <Route path="/u/:username" component={ProfilePage} />
           <Route path="/notfound" component={NotFoundPage} />
