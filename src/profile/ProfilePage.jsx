@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 
 import { sendTrackingLogEvent } from '@edx/frontend-platform/analytics';
-import { ensureConfig } from '@edx/frontend-platform';
+import { ensureConfig, getConfig } from '@edx/frontend-platform';
 import { AppContext } from '@edx/frontend-platform/react';
 import { injectIntl, intlShape } from '@edx/frontend-platform/i18n';
 import { StatusAlert, Hyperlink } from '@edx/paragon';
@@ -30,6 +30,7 @@ import Bio from './forms/Bio';
 import Certificates from './forms/Certificates';
 import AgeMessage from './AgeMessage';
 import DateJoined from './DateJoined';
+import UsernameDescription from './UsernameDescription';
 import PageLoading from './PageLoading';
 import Banner from './Banner';
 
@@ -45,8 +46,10 @@ class ProfilePage extends React.Component {
   constructor(props, context) {
     super(props, context);
 
+    const recordsUrl = this.getRecordsUrl(context);
+
     this.state = {
-      viewMyRecordsUrl: `${context.config.CREDENTIALS_BASE_URL}/records`,
+      viewMyRecordsUrl: recordsUrl,
       accountSettingsUrl: `${context.config.LMS_BASE_URL}/account/settings`,
     };
 
@@ -63,6 +66,27 @@ class ProfilePage extends React.Component {
     sendTrackingLogEvent('edx.profile.viewed', {
       username: this.props.match.params.username,
     });
+  }
+
+  getRecordsUrl(context) {
+    let recordsUrl = null;
+
+    if (getConfig().ENABLE_LEARNER_RECORD_MFE) {
+      recordsUrl = getConfig().LEARNER_RECORD_MFE_BASE_URL;
+    } else {
+      const credentialsBaseUrl = context.config.CREDENTIALS_BASE_URL;
+      recordsUrl = credentialsBaseUrl ? `${credentialsBaseUrl}/records` : null;
+    }
+
+    return recordsUrl;
+  }
+
+  isYOBDisabled() {
+    const { yearOfBirth } = this.props;
+    const currentYear = new Date().getFullYear();
+    const isAgeOrNotCompliant = !yearOfBirth || ((currentYear - yearOfBirth) < 13);
+
+    return isAgeOrNotCompliant && getConfig().COLLECT_YEAR_OF_BIRTH !== 'true';
   }
 
   isAuthenticatedUserProfile() {
@@ -95,7 +119,7 @@ class ProfilePage extends React.Component {
 
   // Inserted into the DOM in two places (for responsive layout)
   renderViewMyRecordsButton() {
-    if (!this.isAuthenticatedUserProfile()) {
+    if (!(this.state.viewMyRecordsUrl && this.isAuthenticatedUserProfile())) {
       return null;
     }
 
@@ -115,6 +139,7 @@ class ProfilePage extends React.Component {
         <span data-hj-suppress>
           <h1 className="h2 mb-0 font-weight-bold">{this.props.match.params.username}</h1>
           <DateJoined date={dateJoined} />
+          {this.isYOBDisabled() && <UsernameDescription />}
           <hr className="d-none d-md-block" />
         </span>
       </>
@@ -246,7 +271,7 @@ class ProfilePage extends React.Component {
             />
           </div>
           <div className="pt-md-3 col-md-8 col-lg-7 offset-lg-1">
-            {this.renderAgeMessage()}
+            {!this.isYOBDisabled() && this.renderAgeMessage()}
             <Bio
               bio={bio}
               visibilityBio={visibilityBio}
@@ -283,6 +308,7 @@ ProfilePage.propTypes = {
 
   // Bio form data
   bio: PropTypes.string,
+  yearOfBirth: PropTypes.number,
   visibilityBio: PropTypes.string.isRequired,
 
   // Certificates form data
@@ -358,6 +384,7 @@ ProfilePage.defaultProps = {
   photoUploadError: {},
   profileImage: {},
   name: null,
+  yearOfBirth: null,
   levelOfEducation: null,
   country: null,
   socialLinks: [],

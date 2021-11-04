@@ -5,6 +5,7 @@ import {
   APP_INIT_ERROR,
   APP_READY,
   initialize,
+  mergeConfig,
   subscribe,
 } from '@edx/frontend-platform';
 import {
@@ -24,7 +25,6 @@ import { ProfilePage, NotFoundPage } from './profile';
 import configureStore from './data/configureStore';
 
 import './index.scss';
-import './assets/favicon.ico';
 
 subscribe(APP_READY, () => {
   ReactDOM.render(
@@ -55,4 +55,13 @@ initialize({
   ],
   requireAuthenticatedUser: true,
   hydrateAuthenticatedUser: true,
+  handlers: {
+    config: () => {
+      mergeConfig({
+        ENABLE_LEARNER_RECORD_MFE: (process.env.ENABLE_LEARNER_RECORD_MFE || false),
+        LEARNER_RECORD_MFE_BASE_URL: process.env.LEARNER_RECORD_MFE_BASE_URL,
+        COLLECT_YEAR_OF_BIRTH: process.env.COLLECT_YEAR_OF_BIRTH,
+      }, 'App loadConfig override handler');
+    },
+  },
 });
